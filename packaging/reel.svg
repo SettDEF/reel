@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#352b2d"/>
+      <stop offset="1" stop-color="#1f1a1b"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="28" fill="url(#bg)"/>
+  <!-- a reel: five holes around a hub -->
+  <circle cx="64" cy="64" r="38" fill="none" stroke="#e8e0e2" stroke-opacity="0.85" stroke-width="6"/>
+  <g fill="#e8e0e2" fill-opacity="0.85">
+    <circle cx="64" cy="40" r="7"/><circle cx="86.8" cy="56.6" r="7"/><circle cx="78.1" cy="83.4" r="7"/>
+    <circle cx="49.9" cy="83.4" r="7"/><circle cx="41.2" cy="56.6" r="7"/>
+  </g>
+  <!-- play -->
+  <path d="M58 56 L74 64 L58 72 Z" fill="#f08a6c" stroke="#f08a6c" stroke-width="4" stroke-linejoin="round"/>
+</svg>

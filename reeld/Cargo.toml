@@ -1,0 +1,17 @@
+[package]
+name = "reeld"
+version = "0.1.0"
+edition = "2021"
+description = "reel's daemon: where you stopped, what you watched, what comes next"
+
+[dependencies]
+# The same stack as quarryd, and the same wire protocol (quarry's PROTOCOL.md
+# frames), so quarry's Client.qml talks to it unchanged.
+tokio = { version = "1", features = ["rt-multi-thread", "macros", "net", "io-util", "signal", "fs", "sync", "process", "time"] }
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+[profile.release]
+opt-level = 3
+lto = true
+strip = true

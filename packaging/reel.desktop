@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=reel
+GenericName=Video Player
+Comment=Play videos — resumes where you stopped, plays the folder in order
+Exec=reel %f
+Icon=reel
+Terminal=false
+Categories=AudioVideo;Video;Player;
+MimeType=video/mp4;video/x-matroska;video/webm;video/quicktime;video/x-msvideo;video/x-m4v;video/mpeg;video/ogg;video/x-flv;video/x-ms-wmv;video/3gpp;video/mp2t;
+StartupWMClass=reel
