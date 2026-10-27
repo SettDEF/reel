@@ -42,20 +42,25 @@ SidePanel {
 
     readonly property var pages: [
         { "id": "playback", "title": "Playback", "icon": "play_circle",
-          "summary": `${root.s.resume ? "Resumes" : "Starts over"} · at the end: ${root.label(root.endOptions, root.s.endAction).toLowerCase()} · ${root.s.defaultSpeed}×` },
+          "summary": `${root.s.resume ? "Resume" : "Start over"} · ${root.label(root.endOptions, root.s.endAction)} at the end · ${root.s.defaultSpeed}×` },
         { "id": "seeking", "title": "Seeking and sound", "icon": "fast_forward",
-          "summary": `Steps ${root.s.seekShort} s / ${root.s.seekLong < 60 ? root.s.seekLong + " s" : root.s.seekLong / 60 + " min"} · volume ${root.s.volumeStep} %` },
+          "summary": `Steps of ${root.s.seekShort} s and ${root.s.seekLong < 60 ? root.s.seekLong + " s" : root.s.seekLong / 60 + " min"} · Volume ${root.s.volumeStep} %` },
         { "id": "picture", "title": "Picture and subtitles", "icon": "aspect_ratio",
-          "summary": `${root.label(root.fitOptions, root.s.fit)} · subtitles ${root.s.subtitlesOn ? "on" : "off"} by default` },
+          "summary": `${root.label(root.fitOptions, root.s.fit)} · Subtitles ${root.s.subtitlesOn ? "on" : "off"}` },
         { "id": "controls", "title": "Controls", "icon": "smart_button",
-          "summary": `Hide after ${root.s.hideAfterMs / 1000} s · ${root.s.seekPreview ? "preview on the timeline" : "no preview"}` },
+          "summary": `Hide after ${root.s.hideAfterMs / 1000} s · ${root.s.seekPreview ? "Timeline preview" : "No preview"}` },
         { "id": "look", "title": "Look", "icon": "palette",
-          "summary": `${root.label(root.accentOptions, root.s.accent)} accent · ${root.s.controlStyle === "pill" ? "card" : "on the picture"} · ${root.s.windowButtons}` },
+          "summary": `${root.label(root.accentOptions, root.s.accent)} accent · ${root.s.titleBar === "system" ? "System title bar" : "Own title bar"}` },
         { "id": "screenshots", "title": "Screenshots", "icon": "photo_camera",
-          "summary": `${root.s.screenshotFormat.toUpperCase()}${root.s.screenshotCopy ? " · copied" : ""} · ${root.s.screenshotDir.replace(/^~\//, "")}` },
+          "summary": `${root.s.screenshotFormat.toUpperCase()} · ${root.s.screenshotDir.replace(/^~\//, "")}${root.s.screenshotCopy ? " · Copied" : ""}` },
         { "id": "history", "title": "History", "icon": "history",
-          "summary": root.s.history ? "Remembers where you stopped" : "Off — nothing is remembered" },
+          "summary": root.s.history ? "Remembers where you stopped" : "Off" },
     ]
+    readonly property var keysPage: [{ "id": "keys", "title": "Keyboard shortcuts", "icon": "keyboard", "summary": "View and change every key" }]
+
+    /// As tall as what it shows (the window sets its height from this), not
+    /// the whole window with half of it empty.
+    implicitHeight: 12 + 30 + 8 + (pageLoader.item ? pageLoader.item.implicitHeight : 0) + 12
 
     Flickable {
         id: flick
@@ -73,62 +78,82 @@ SidePanel {
         }
     }
 
-    // ── home: the categories ─────────────────────────────────────────────
+    // ── home: the categories, as grouped lists ─────────────────────────
     Component {
         id: home
         ColumnLayout {
-            spacing: 4
+            spacing: 12
             Repeater {
-                model: root.pages.concat([{ "id": "keys", "title": "Keyboard shortcuts", "icon": "keyboard",
-                                            "summary": "See and change every key" }])
+                model: [root.pages, root.keysPage]
                 delegate: Rectangle {
-                    id: cat
+                    id: group
                     required property var modelData
+                    readonly property var items: modelData
                     Layout.fillWidth: true
-                    implicitHeight: 62
+                    implicitHeight: col.implicitHeight
                     radius: Appearance.rounding.normal
-                    color: catHov.hovered ? Appearance.colors.colLayer2Hover : "transparent"
-                    Behavior on color { ColorAnimation { duration: 120 } }
+                    color: Appearance.colors.colLayer2
+                    clip: true
+                    ColumnLayout {
+                        id: col
+                        width: parent.width
+                        spacing: 0
+                        Repeater {
+                            model: group.items
+                            delegate: Rectangle {
+                                id: cat
+                                required property var modelData
+                                required property int index
+                                Layout.fillWidth: true
+                                implicitHeight: 56
+                                color: catHov.hovered ? Appearance.colors.colLayer2Hover : ColorUtils.transparentize(Appearance.colors.colLayer2Hover, 1)
+                                Behavior on color { ColorAnimation { duration: 120 } }
 
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 8
-                        anchors.rightMargin: 8
-                        spacing: 12
-                        Rectangle {
-                            implicitWidth: 38; implicitHeight: 38
-                            radius: Appearance.rounding.full
-                            color: Appearance.colors.colPrimaryContainer
-                            MaterialSymbol {
-                                anchors.centerIn: parent
-                                text: cat.modelData.icon
-                                iconSize: 20
-                                color: Appearance.colors.colOnPrimaryContainer
+                                // between rows, from the text's edge — not across the icons
+                                Rectangle {
+                                    visible: cat.index > 0
+                                    anchors { top: parent.top; left: parent.left; right: parent.right; leftMargin: 50 }
+                                    height: 1
+                                    color: Appearance.colors.colOutlineVariant
+                                    opacity: 0.6
+                                }
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 16
+                                    anchors.rightMargin: 12
+                                    spacing: 14
+                                    MaterialSymbol {
+                                        Layout.preferredWidth: 20
+                                        text: cat.modelData.icon
+                                        iconSize: 20
+                                        color: Appearance.colors.colOnSurfaceVariant
+                                    }
+                                    ColumnLayout {
+                                        Layout.fillWidth: true
+                                        spacing: 2
+                                        StyledText {
+                                            Layout.fillWidth: true
+                                            text: cat.modelData.title
+                                            font.pixelSize: Appearance.font.pixelSize.small
+                                            font.weight: Font.Medium
+                                            color: Appearance.colors.colOnLayer1
+                                        }
+                                        StyledText {
+                                            Layout.fillWidth: true
+                                            text: cat.modelData.summary
+                                            font.pixelSize: Appearance.font.pixelSize.smaller
+                                            color: Appearance.colors.colSubtext
+                                            elide: Text.ElideRight
+                                        }
+                                    }
+                                    MaterialSymbol { text: "chevron_right"; iconSize: 18; color: Appearance.colors.colSubtext }
+                                }
+                                HoverHandler { id: catHov; cursorShape: Qt.PointingHandCursor }
+                                TapHandler {
+                                    onTapped: cat.modelData.id === "keys" ? root.shortcutsRequested() : root.page = cat.modelData.id
+                                }
                             }
                         }
-                        ColumnLayout {
-                            Layout.fillWidth: true
-                            spacing: 1
-                            StyledText {
-                                Layout.fillWidth: true
-                                text: cat.modelData.title
-                                font.pixelSize: Appearance.font.pixelSize.small
-                                font.weight: Font.DemiBold
-                                color: Appearance.colors.colOnLayer1
-                            }
-                            StyledText {
-                                Layout.fillWidth: true
-                                text: cat.modelData.summary
-                                font.pixelSize: Appearance.font.pixelSize.smaller
-                                color: Appearance.colors.colSubtext
-                                elide: Text.ElideRight
-                            }
-                        }
-                        MaterialSymbol { text: "chevron_right"; iconSize: 20; color: Appearance.colors.colSubtext }
-                    }
-                    HoverHandler { id: catHov; cursorShape: Qt.PointingHandCursor }
-                    TapHandler {
-                        onTapped: cat.modelData.id === "keys" ? root.shortcutsRequested() : root.page = cat.modelData.id
                     }
                 }
             }
@@ -219,6 +244,12 @@ SidePanel {
                 onPicked: v => root.s.hideAfterMs = v
             }
             SettingRow {
+                icon: "touch_app"; label: "Click the picture to pause"
+                description: "A double-click still goes fullscreen"
+                hasSwitch: true; checked: root.s.clickToPause
+                onToggled: on => root.s.clickToPause = on
+            }
+            SettingRow {
                 icon: "preview"; label: "Preview on the timeline"
                 description: "A still of that moment above the pointer"
                 hasSwitch: true; checked: root.s.seekPreview
@@ -307,6 +338,14 @@ SidePanel {
                 onToggled: on => root.s.filledPlay = on
             }
             ChoiceRow {
+                icon: "web_asset"; label: "Title bar"
+                description: "System is the bar your other windows have"
+                options: [{ "value": "system", "label": "System" }, { "value": "own", "label": "reel's own" }]
+                current: root.s.titleBar
+                onPicked: v => root.s.titleBar = v
+            }
+            ChoiceRow {
+                visible: root.s.titleBar !== "system"
                 icon: "more_horiz"; label: "Window buttons"
                 description: "Dots match the title bars of your other windows"
                 options: [{ "value": "dots", "label": "Dots" }, { "value": "icons", "label": "Icons" }]

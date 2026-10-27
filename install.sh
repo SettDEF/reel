@@ -53,7 +53,7 @@ cp -f "$TARGET" "$BIN/reeld.new"; chmod 755 "$BIN/reeld.new"; mv -f "$BIN/reeld.
 say "installing the window to $APP"
 rm -rf -- "${APP:?}.new"
 mkdir -p "$APP.new"
-cp -rL shell.qml reel.sh reel modules services "$APP.new/"
+cp -rL shell.qml Momentum.qml MomentumInjector.qml reel.sh reel viewers modules services "$APP.new/"
 rm -rf -- "${APP:?}"
 mv "$APP.new" "$APP"
 # the launcher is the app's own reel.sh (it finds shell.qml beside itself)

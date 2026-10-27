@@ -28,6 +28,21 @@ fi
 
 # A reel already open takes the file; otherwise a new window.
 if [ -n "$file" ] && qs -p "$SHELL_QML" ipc call reel open "$file" >/dev/null 2>&1; then
+  # Bring that window to the workspace you are on, and focus it: otherwise
+  # the file starts playing on whichever workspace reel was left on.
+  if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && command -v hyprctl >/dev/null && command -v jq >/dev/null; then
+    ws=$(hyprctl activeworkspace -j | jq -r .id)
+    addr=$(hyprctl clients -j | jq -r '[.[] | select(.class == "reel")] | sort_by(.focusHistoryID) | .[0].address // empty')
+    if [ -n "$addr" ] && [ -n "$ws" ]; then
+      # Hyprland 0.56 with a Lua config reads `dispatch` as Lua; older ones
+      # take the plain dispatcher strings
+      if hyprctl dispatch "hl.dsp.window.move({ workspace = $ws, follow = false, window = \"address:$addr\" })" 2>/dev/null | grep -qx ok; then
+        hyprctl dispatch "hl.dsp.focus({ window = \"address:$addr\" })" >/dev/null 2>&1
+      else
+        hyprctl --batch "dispatch movetoworkspacesilent $ws,address:$addr ; dispatch focuswindow address:$addr" >/dev/null 2>&1
+      fi
+    fi
+  fi
   exit 0
 fi
 REEL_OPEN=$file exec qs -n -p "$SHELL_QML"

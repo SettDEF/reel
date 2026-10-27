@@ -1,0 +1,1 @@
+{ "id": "pdf", "name": "PDF", "exts": ["pdf"], "entry": "Viewer.qml" }

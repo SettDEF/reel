@@ -1,0 +1,1 @@
+{ "id": "image", "name": "Images", "exts": ["jpg", "jpeg", "png", "webp", "gif", "bmp", "avif", "heic", "heif", "tif", "tiff", "svg", "jxl", "ico", "psd", "xcf", "kra", "exr", "hdr", "jp2", "qoi", "tga", "dng", "cr2", "cr3", "nef", "arw", "raf", "orf", "rw2"], "entry": "Viewer.qml" }

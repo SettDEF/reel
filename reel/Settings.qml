@@ -120,6 +120,7 @@ Singleton {
             // remember positions and what was watched
             property bool history: true
             property bool startFullscreen: false
+            property bool clickToPause: true      // a click on the picture pauses / plays
             // the loop button, remembered
             property bool loop: false
             property real defaultSpeed: 1.0
@@ -151,7 +152,9 @@ Singleton {
             // accent: "theme" | "secondary" | "tertiary" | "#rrggbb"
             property string accent: "theme"
             property bool filledPlay: true
-            // window buttons: "dots" (as ii-decor) | "icons"
+            // the title bar: "system" (ii-decor's, as on every other window) | "own" (reel's row)
+            property string titleBar: "system"
+            // reel's own window buttons: "dots" (as ii-decor) | "icons"
             property string windowButtons: "dots"
             // folder sheet
             property string playlistSide: "right"

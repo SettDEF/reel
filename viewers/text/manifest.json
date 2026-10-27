@@ -1,0 +1,1 @@
+{ "id": "text", "name": "Text and Markdown", "exts": ["md", "markdown", "txt", "log", "json", "toml", "yaml", "yml", "ini", "conf", "csv", "rs", "py", "js", "qml", "sh", "c", "cpp", "h", "lua", "nix", "xml", "html", "css"], "entry": "Viewer.qml" }

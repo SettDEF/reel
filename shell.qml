@@ -28,9 +28,9 @@ import qs.reel
  * them, its settings and keys (reel/Settings.qml), and through reeld the
  * memory a player needs: where you stopped, and what comes next in the folder.
  *
- * The window has no ii-decor title bar (quickshell windows are excluded); the
- * top row carries the same buttons, through ii-decor-btn, so minimize and
- * fullscreen behave exactly as everywhere else.
+ * The title bar is ii-decor's, as on every other window (Settings → Look →
+ * Title bar). Set to reel's own, the top row carries the same buttons,
+ * through ii-decor-btn, so minimize and fullscreen behave as everywhere else.
  */
 ShellRoot {
     id: shell
@@ -39,7 +39,9 @@ ShellRoot {
     property string path: ""
     readonly property string title: shell.path.split("/").pop()
     /// VideoView takes a quarry row; a local file is the simplest row there is.
-    readonly property var item: shell.path.length > 0
+    /// the viewer for the open file (an image, a PDF, text — reel/Viewers.qml), or null: the player's
+    readonly property var viewer: Viewers.list.length >= 0 ? Viewers.viewerFor(shell.path) : null
+    readonly property var item: shell.path.length > 0 && !shell.viewer
         ? ({ "id": shell.path, "family": "video", "url": "file://" + shell.path, "title": shell.title })
         : null
     readonly property var player: view.mediaPlayer
@@ -53,6 +55,8 @@ ShellRoot {
         if (next.length === 0 || next === shell.path) return;
         shell.saveProgress();
         shell.path = next;
+        // not a video: its viewer takes it, and the arrows walk its kind of file
+        if (Viewers.viewerFor(next)) { Viewers.folder(next); return; }
         view.rate = shell.s.defaultSpeed;
         Library.folder(next);
         if (!shell.s.resume || !shell.s.history) return;
@@ -66,6 +70,12 @@ ShellRoot {
         });
     }
     function step(delta) {
+        if (shell.viewer) {
+            const j = Viewers.siblingIndex + delta;
+            if (j >= 0 && j < Viewers.siblings.length) shell.open(Viewers.siblings[j]);
+            else shell.osd(delta > 0 ? "last_page" : "first_page", delta > 0 ? "Last one in the folder" : "First one in the folder");
+            return;
+        }
         const i = Library.index + delta;
         if (i >= 0 && i < Library.files.length) shell.open(Library.files[i]);
         else shell.osd(delta > 0 ? "last_page" : "first_page", delta > 0 ? "Last video in the folder" : "First video in the folder");
@@ -250,6 +260,11 @@ ShellRoot {
         }
     }
 
+    // the viewers load after a file can already be open: give it its folder then
+    Connections {
+        target: Viewers
+        function onListChanged() { if (shell.viewer && Viewers.siblings.length === 0) Viewers.folder(shell.path); }
+    }
     IpcHandler {
         target: "reel"
         function open(path: string): void { shell.open(path); }
@@ -268,9 +283,24 @@ ShellRoot {
         }
     }
 
+    // the real window buttons, drawn by the compositor over our top-right corner (ii-decor)
+    Process {
+        id: decor
+        command: ["sh", "-c", "sleep 0.4; hyprctl iidecor integrate pid:$PPID overlay >/dev/null 2>&1 || true"]
+    }
+    Timer { interval: 200; running: win.visible; onTriggered: decor.running = true }
+
+
     FloatingWindow {
+
+
+        // browser-like scrolling for every list in the window (Momentum.qml)
+
+
+        MomentumInjector { root: parent }
         id: win
-        title: shell.item ? `${shell.title} — reel` : "reel"
+        // named from the start: the window rules (a picture floats) see the file the moment it maps
+        title: (shell.path || Quickshell.env("REEL_OPEN") || "") !== "" ? `${(shell.path || Quickshell.env("REEL_OPEN")).split("/").pop()} — reel` : "reel"
         implicitWidth: 1280
         implicitHeight: 760
         color: "black"
@@ -298,9 +328,27 @@ ShellRoot {
                 event.accepted = false;
             }
 
+            // an image, a PDF, text: the viewer for it, over an idle player
+            Loader {
+                id: viewerLoader
+                anchors.fill: parent
+                z: 2
+                focus: active
+                active: !!shell.viewer
+                source: shell.viewer ? shell.viewer.url : ""
+                onLoaded: { item.path = Qt.binding(() => shell.path); item.forceActiveFocus(); }
+                Binding { target: viewerLoader.item; property: "accent"; value: Appearance.colors.colPrimary; when: !!viewerLoader.item }
+                // where it is in its folder, and the files beside it (a viewer may load them ahead)
+                Binding { target: viewerLoader.item; property: "index"; value: Viewers.siblingIndex; when: !!viewerLoader.item && "index" in viewerLoader.item }
+                Binding { target: viewerLoader.item; property: "count"; value: Viewers.siblings.length; when: !!viewerLoader.item && "count" in viewerLoader.item }
+                Binding { target: viewerLoader.item; property: "neighbours"; value: [Viewers.siblings[Viewers.siblingIndex + 1], Viewers.siblings[Viewers.siblingIndex - 1]]; when: !!viewerLoader.item && "neighbours" in viewerLoader.item }
+                Connections { target: viewerLoader.item; ignoreUnknownSignals: true; function onStep(d) { shell.step(d); } }
+            }
+
             VideoView {
                 id: view
                 anchors.fill: parent
+                visible: !shell.viewer
                 item: shell.item
                 active: true
                 // Loop and the clock are remembered: the bar's own buttons flip
@@ -348,10 +396,18 @@ ShellRoot {
                 }
             }
 
-            // Double-click anywhere on the picture: fullscreen, as in every player.
+            // A click on the picture: pause / play (Settings › Controls can turn it off).
+            // A double-click: fullscreen, as in every player. The click waits out the
+            // double-click time, so a double-click does not pause and play on its way.
             TapHandler {
                 acceptedButtons: Qt.LeftButton
-                onDoubleTapped: shell.run("fullscreen")
+                onTapped: if (shell.s.clickToPause) clickPause.restart()
+                onDoubleTapped: { clickPause.stop(); shell.run("fullscreen"); }
+            }
+            Timer {
+                id: clickPause
+                interval: Qt.styleHints.mouseDoubleClickInterval
+                onTriggered: shell.run("toggle")
             }
             // The wheel over the picture: volume.
             WheelHandler {
@@ -377,7 +433,7 @@ ShellRoot {
                 border.width: view.onPicture ? 0 : 1
                 border.color: Appearance.colors.colOutlineVariant
                 opacity: view.controlsOpacity
-                visible: opacity > 0.01
+                visible: opacity > 0.01 && shell.item !== null   // the start screen has its own toolbar
                 readonly property color fg: view.onPicture ? "#ffffff" : Appearance.colors.colOnLayer1
                 readonly property color hover: view.onPicture ? Qt.rgba(1, 1, 1, 0.14) : Appearance.colors.colLayer1Hover
                 HoverHandler { id: topHover }
@@ -394,6 +450,8 @@ ShellRoot {
                         opacity: shell.s.showTitle ? 1 : 0
                         StyledText {
                             Layout.fillWidth: true
+                            // the system title bar already names the file
+                            visible: shell.s.titleBar !== "system"
                             text: shell.item ? shell.title.replace(/\.[^.]+$/, "") : "reel"
                             elide: Text.ElideMiddle
                             font.pixelSize: Appearance.font.pixelSize.larger
@@ -462,17 +520,17 @@ ShellRoot {
                             }
                         }
                     }
-                    Item { Layout.preferredWidth: 14 }
+                    Item { Layout.preferredWidth: 14; visible: shell.s.titleBar !== "system" }
 
-                    // The window's own buttons: the dots ii-decor draws on
-                    // every other window, or plain icons.
+                    // The window's own buttons, when the title bar is reel's:
+                    // the dots ii-decor draws on every other window, or icons.
                     WindowDots {
-                        visible: shell.s.windowButtons === "dots"
+                        visible: shell.s.titleBar !== "system" && shell.s.windowButtons === "dots"
                         Layout.alignment: Qt.AlignVCenter
                         onPressed: action => action === "close" ? shell.quit() : shell.windowButton(action)
                     }
                     Repeater {
-                        model: shell.s.windowButtons === "icons"
+                        model: shell.s.titleBar !== "system" && shell.s.windowButtons === "icons"
                             ? [{ "id": "minimize", "icon": "remove" }, { "id": "fullscreen", "icon": "fullscreen" }, { "id": "close", "icon": "close" }] : []
                         delegate: IconButton {
                             required property var modelData
@@ -578,7 +636,8 @@ ShellRoot {
                 }
                 SettingsSheet {
                     id: settingsSheet
-                    anchors { top: parent.top; bottom: parent.bottom }
+                    anchors.top: parent.top
+                    height: Math.min(parent.height, implicitHeight)
                     side: shell.s.playlistSide
                     look: shell.s.panelStyle
                     open: panels.current === "settings"
@@ -675,8 +734,10 @@ ShellRoot {
             Home {
                 anchors.fill: parent
                 z: -1
-                visible: !shell.item
+                // not under a picture either: hidden there it still took clicks (one on the image opened a library file)
+                visible: !shell.item && !shell.viewer
                 onPicked: path => shell.open(path)
+                onAction: id => shell.run(id)
             }
 
             Snackbar {

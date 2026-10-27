@@ -7,5 +7,5 @@ Exec=reel %f
 Icon=reel
 Terminal=false
 Categories=AudioVideo;Video;Player;
-MimeType=video/mp4;video/x-matroska;video/webm;video/quicktime;video/x-msvideo;video/x-m4v;video/mpeg;video/ogg;video/x-flv;video/x-ms-wmv;video/3gpp;video/mp2t;
+MimeType=video/mp4;video/x-matroska;video/webm;video/quicktime;video/x-msvideo;video/x-m4v;video/mpeg;video/ogg;video/x-flv;video/x-ms-wmv;video/3gpp;video/mp2t;image/jpeg;image/png;image/webp;image/gif;image/avif;image/heif;image/jxl;image/tiff;image/bmp;image/svg+xml;image/x-xcf;image/vnd.adobe.photoshop;application/pdf;text/markdown;text/plain;
 StartupWMClass=reel
