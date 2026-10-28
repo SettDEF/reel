@@ -411,6 +411,7 @@ ShellRoot {
             }
             // The wheel over the picture: volume.
             WheelHandler {
+                enabled: !shell.viewer   // an image, a PDF or text has its own wheel (pan, zoom)
                 onWheel: event => shell.setVolume(Prefs.videoVolume + (event.angleDelta.y > 0 ? 1 : -1) * shell.s.volumeStep / 100)
             }
 

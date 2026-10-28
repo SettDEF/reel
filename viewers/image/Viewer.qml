@@ -77,6 +77,29 @@ FocusScope {
     function fill() { v.mode = "free"; v.scaleAt(v.fillScale, v.width / 2, v.height / 2); }
     function actualAt(px, py) { v.mode = "free"; v.scaleAt(1, px, py); }
     function pan(dx, dy) { v.ox += dx; v.oy += dy; v.clampPos(); }
+    // two fingers: the picture moves as far as it can, the rest stretches it (bx, by) and springs back;
+    // a long sideways stretch on a picture that fits walks to the next or previous one
+    property real bx: 0
+    property real by: 0
+    property bool springing: false
+    function touchPan(dx, dy) {
+        const ox0 = v.ox, oy0 = v.oy
+        v.pan(dx, dy)
+        v.springing = false
+        v.bx = Math.max(-180, Math.min(180, v.bx + (dx - (v.ox - ox0)) * 0.4))
+        v.by = Math.max(-180, Math.min(180, v.by + (dy - (v.oy - oy0)) * 0.4))
+        spring.restart()
+    }
+    Timer {
+        id: spring
+        interval: 140
+        onTriggered: {
+            if (Math.abs(v.bx) > 110 && v.shownW <= v.width + 1 && Math.abs(v.bx) > Math.abs(v.by)) v.step(v.bx > 0 ? -1 : 1)
+            v.springing = true; v.bx = 0; v.by = 0
+        }
+    }
+    Behavior on bx { enabled: v.springing; NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
+    Behavior on by { enabled: v.springing; NumberAnimation { duration: 260; easing.type: Easing.OutCubic } }
 
     // smooth steps for keys and double-click: the same anchor, animated
     property real animTo: 1
@@ -150,7 +173,7 @@ FocusScope {
     // ── the picture ──
     Item {
         id: frame
-        x: v.ox; y: v.oy
+        x: v.ox + v.bx; y: v.oy + v.by
         width: v.shownW; height: v.shownH
         visible: v.ready
 
@@ -235,7 +258,7 @@ FocusScope {
         onWheel: (w) => {
             const touch = w.pixelDelta.x !== 0 || w.pixelDelta.y !== 0;
             if (touch && !(w.modifiers & Qt.ControlModifier)) {
-                v.pan(w.pixelDelta.x, w.pixelDelta.y);
+                v.touchPan(w.pixelDelta.x, w.pixelDelta.y);
             } else {
                 const d = w.angleDelta.y !== 0 ? w.angleDelta.y / 120 : w.pixelDelta.y / 40;
                 if (w.modifiers & Qt.ShiftModifier) v.pan(d * 120, 0);          // Shift+wheel: sideways
